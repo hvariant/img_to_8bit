@@ -1,6 +1,7 @@
 from PIL import Image
 from math import sqrt
 import sys
+import random
 
 #change images into 8-bit style
 
@@ -40,7 +41,7 @@ def conv_palette(palette):
 def getrgbpixel(im,data,pos):
     return data[pos[1]*im.size[0]+pos[0]]
 
-def proc(infile,chunk=(10,10),palette=default_palette):
+def proc(infile,chunk=(10,10),palette=default_palette,sample_ratio=0.2):
     im = Image.open(infile)
     im = im.convert("RGB")
     im2 = Image.new("P",im.size)
@@ -52,22 +53,35 @@ def proc(infile,chunk=(10,10),palette=default_palette):
     avgcolors = {}
     data = list(im.getdata())
     
-    for x in range(im.size[0]):
-        for y in range(im.size[1]):
-            section = (int(x/chunk[0]),int(y/chunk[1]))
-            pixel = getrgbpixel(im,data,(x,y))
+    sample_size = int(chunk[0]*chunk[1]*sample_ratio)
+
+    print("sampling")
+    for x_ in range(w8):
+        for y_ in range(h8):
+            section = (x_,y_)
             avgcolors.setdefault(section,[0,0,0])
-            avgcolors[section][0] += pixel[0]
-            avgcolors[section][1] += pixel[1]
-            avgcolors[section][2] += pixel[2]
+
+            for dummy in range(sample_size):
+                x = x_*chunk[0] + random.randint(0,chunk[0]-1)
+                y = y_*chunk[1] + random.randint(0,chunk[1]-1)
+                if x >= im.size[0]:
+                    x = im.size[0] - 1
+                if y >= im.size[1]:
+                    y = im.size[1] - 1
+
+                pixel = getrgbpixel(im,data,(x,y))
+                avgcolors[section][0] += pixel[0]
+                avgcolors[section][1] += pixel[1]
+                avgcolors[section][2] += pixel[2]
     
     colors = {}
 
+    print("generating image")
     for x in range(w8):
         for y in range(h8):
-            avgcolors[(x,y)][0] = int(avgcolors[(x,y)][0]/(chunk[0]*chunk[1]))
-            avgcolors[(x,y)][1] = int(avgcolors[(x,y)][1]/(chunk[0]*chunk[1]))
-            avgcolors[(x,y)][2] = int(avgcolors[(x,y)][2]/(chunk[0]*chunk[1]))
+            avgcolors[(x,y)][0] = int(avgcolors[(x,y)][0]/sample_size)
+            avgcolors[(x,y)][1] = int(avgcolors[(x,y)][1]/sample_size)
+            avgcolors[(x,y)][2] = int(avgcolors[(x,y)][2]/sample_size)
             
             colors[(x,y)] = nearest(avgcolors[(x,y)])
 
